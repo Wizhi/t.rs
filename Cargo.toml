@@ -1,5 +1,5 @@
 [package]
-name = "tart"
+name = "t"
 version = "0.1.0"
 authors = ["Simon Mikkelsen <simonbodall@runbox.com>"]
 edition = "2018"
