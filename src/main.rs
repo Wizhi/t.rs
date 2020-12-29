@@ -45,7 +45,7 @@ fn main() {
                 list.add(text.collect::<Vec<_>>().join(" ").trim());
                 save_list(path, list).expect("Failed to save list");
             },
-            None => println!("List")
+            None => print_list(list)
         }
     };
 }
@@ -162,5 +162,13 @@ fn task_from_taskline(line: &str) -> Option<Task> {
                 id: generate_id(line)
             }
         })
+    }
+}
+
+fn print_list(list: TaskList) {
+    let mut stdout = io::stdout();
+
+    for task in list.tasks {
+        writeln!(&mut stdout, "{} - {}", task.id, task.text).expect("Failed to write to stdout");
     }
 }
