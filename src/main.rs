@@ -6,6 +6,7 @@ use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::hash::{Hash, Hasher};
 use std::io::{self, BufRead, BufReader, Write};
+use std::iter::FromIterator;
 
 fn main() {
     let matches = clap_app!(t =>
@@ -25,7 +26,7 @@ fn main() {
     let mut list = match load_list(path) {
         Ok(list) => list,
         Err(e) => match e.kind() {
-            io::ErrorKind::NotFound => TaskList { tasks: HashSet::new() },
+            io::ErrorKind::NotFound => TaskList::new(),
             _ => todo!()
         }
     };
@@ -58,6 +59,17 @@ struct Task {
     id: Id
 }
 
+impl Task {
+    fn new(text: &str) -> Self {
+        let text = text.trim();
+
+        Self {
+            text: text.to_owned(),
+            id: generate_id(text)
+        }
+    }
+}
+
 impl PartialEq for Task {
     fn eq(&self, other: &Task) -> bool {
         self.id == other.id
@@ -81,13 +93,20 @@ struct TaskList {
 }
 
 impl TaskList {
-    fn add(&mut self, text: &str) {
-        let task = Task {
-            text: text.trim().to_owned(),
-            id: generate_id(text)
-        };
+    fn new() -> Self {
+        Self {
+            tasks: HashSet::new()
+        }
+    }
 
-        self.tasks.insert(task);
+    fn from_tasks<T: IntoIterator<Item = Task>>(tasks: T) -> Self {
+        Self {
+            tasks: HashSet::from_iter(tasks)
+        }
+    }
+
+    fn add(&mut self, text: &str) {
+        self.tasks.insert(Task::new(text));
     }
 }
 
@@ -106,7 +125,7 @@ fn load_list(path: &str) -> io::Result<TaskList> {
         }
     }
 
-    Ok(TaskList { tasks })
+    Ok(TaskList::from_tasks(tasks))
 }
 
 fn save_list(path: &str, list: TaskList) -> io::Result<()> {
@@ -157,10 +176,7 @@ fn task_from_taskline(line: &str) -> Option<Task> {
                         .to_owned()
                 }
             },
-            None => Task {
-                text: String::from(line),
-                id: generate_id(line)
-            }
+            None => Task::new(line)
         })
     }
 }
