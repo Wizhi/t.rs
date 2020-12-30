@@ -40,7 +40,12 @@ fn main() {
     match (edit, finish, remove) {
         (true, _, _) => println!("Edit {}", matches.value_of("edit").unwrap()),
         (_, true, _) => println!("Finish {}", matches.value_of("finish").unwrap()),
-        (_, _, true) => println!("Remove {}", matches.value_of("remove").unwrap()),
+        (_, _, true) => {
+            let id = matches.value_of("remove").unwrap().to_owned();
+            
+            list.remove(id);
+            save_list(path, list).expect("Failed to save list");
+        },
         _ => match matches.values_of("text") {
             Some(text) => {
                 list.add(text.collect::<Vec<_>>().join(" ").trim());
@@ -107,6 +112,10 @@ impl TaskList {
 
     fn add(&mut self, text: &str) {
         self.tasks.insert(Task::new(text));
+    }
+
+    fn remove(&mut self, id: Id) {
+        self.tasks.retain(|t| t.id != id);
     }
 }
 
