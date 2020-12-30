@@ -38,7 +38,19 @@ fn main() {
     );
 
     match (edit, finish, remove) {
-        (true, _, _) => println!("Edit {}", matches.value_of("edit").unwrap()),
+        (true, _, _) => {
+            // TODO Fix hacky ownership
+            let text = match matches.values_of("text") {
+                Some(t) => t.collect::<Vec<_>>().join(" ").trim().to_owned(),
+                None => String::from("")
+            };
+
+            let id = matches.value_of("edit").unwrap();
+            
+            list.edit(id.to_owned(), text.as_str());
+
+            save_list(path, list).expect("Failed to save list");
+        },
         (_, true, _) => println!("Finish {}", matches.value_of("finish").unwrap()),
         (_, _, true) => {
             let id = matches.value_of("remove").unwrap().to_owned();
@@ -116,6 +128,11 @@ impl TaskList {
 
     fn remove(&mut self, id: Id) {
         self.tasks.retain(|t| t.id != id);
+    }
+
+    fn edit(&mut self, id: Id, text: &str) {
+        self.remove(id);
+        self.add(text);
     }
 }
 
