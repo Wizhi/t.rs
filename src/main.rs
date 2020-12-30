@@ -7,12 +7,14 @@ use std::fs::File;
 use std::hash::{Hash, Hasher};
 use std::io::{self, BufRead, BufReader, Write};
 use std::iter::FromIterator;
+use std::path::{Path, PathBuf};
 
 fn main() {
     let matches = clap_app!(t =>
         (version: "0.1.0")
         (author: "Simon Mikkelsen <simonbodall@runbox.com>")
         (about: "A Rust based port of t.py")
+        (@arg ("task-dir"): -t --("task-dir") [DIR] +required +takes_value "The directory of lists")
         (@arg list: -l --list [LIST] +required +takes_value "The list to work on")
         (@group action => 
             (@arg edit: -e --edit [TASK] +takes_value "Edit TASK to contain TEXT")
@@ -22,8 +24,15 @@ fn main() {
         (@arg text: [TEXT] ... +takes_value)
     ).get_matches();
 
-    let path = matches.value_of("list").unwrap();
-    let mut list = match load_list(path) {
+    let mut path = PathBuf::from(matches.value_of("task-dir").unwrap());
+
+    if !path.is_dir() {
+        todo!();
+    }
+
+    path.push(matches.value_of("list").unwrap());
+
+    let mut list = match load_list(&path) {
         Ok(list) => list,
         Err(e) => match e.kind() {
             io::ErrorKind::NotFound => TaskList::new(),
@@ -49,19 +58,19 @@ fn main() {
             
             list.edit(id.to_owned(), text.as_str());
 
-            save_list(path, list).expect("Failed to save list");
+            save_list(&path, list).expect("Failed to save list");
         },
         (_, true, _) => println!("Finish {}", matches.value_of("finish").unwrap()),
         (_, _, true) => {
             let id = matches.value_of("remove").unwrap().to_owned();
             
             list.remove(id);
-            save_list(path, list).expect("Failed to save list");
+            save_list(&path, list).expect("Failed to save list");
         },
         _ => match matches.values_of("text") {
             Some(text) => {
                 list.add(text.collect::<Vec<_>>().join(" ").trim());
-                save_list(path, list).expect("Failed to save list");
+                save_list(&path, list).expect("Failed to save list");
             },
             None => print_list(list)
         }
@@ -136,7 +145,7 @@ impl TaskList {
     }
 }
 
-fn load_list(path: &str) -> io::Result<TaskList> {
+fn load_list(path: &Path) -> io::Result<TaskList> {
     let file = File::open(path)?;
     let file = BufReader::new(file);
 
@@ -154,7 +163,7 @@ fn load_list(path: &str) -> io::Result<TaskList> {
     Ok(TaskList::from_tasks(tasks))
 }
 
-fn save_list(path: &str, list: TaskList) -> io::Result<()> {
+fn save_list(path: &Path, list: TaskList) -> io::Result<()> {
     let mut file = File::create(path)?;
 
     for task in list.tasks.iter() {
